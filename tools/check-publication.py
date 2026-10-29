@@ -19,7 +19,13 @@ WRAPPER_SHA256 = '498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f
 
 
 # User-provided screenshots inspected for this public source release.
-SCREENSHOTS = {'docs/screenshots/home.png': '697329c7a1e5873556bb1cafb05efd4ee9978d0b0fa794f5ab3713d8ed9a9ad0', 'docs/screenshots/apps.png': 'e5bdaa3b94696680377c26895df836e0f11d9f3a360e67ddb1a03df4b3944991', 'docs/screenshots/catalog.png': 'c06c6143a302ba793122f2b9f2bfcb304e433049c35781451ac7fba1b7d7eb1a', 'docs/screenshots/devices.png': 'e1c552de14b2db2341eaa795f0e5d8d39c6f75cb953ac5f7e209cf90a7a7c9b0', 'docs/screenshots/favorites.png': '16974640f0a38c9be282bc360274a7ab1a31be4c0095699547b13b294fefe43c'}
+SCREENSHOTS = {
+    "docs/screenshots/apps.webp": "74088db42ad70a331b0d1e5d62cdb8a2f775814773f6c80893c60499584f1174",
+    "docs/screenshots/devices.webp": "78a8b0fe57feb4cc1672790665963a7dc60d8e70e7b73331a5ca16de32cd2157",
+    "docs/screenshots/favorites.webp": "0c265bf9a3e369dc802440b249c1a0270f039f5d9fc3594a6eb8cba4ed8ea47a",
+    "docs/screenshots/home.webp": "333918a207244022ac056892a7e0ad261c6a0684caab2cf4e4d5d46b758194f5",
+    "docs/screenshots/movies.webp": "ea668f9751fadf6abaa955e4239ee97c894f998f825af50e90e6d734b3ed7fc4"
+}
 
 def inspect(relative, raw):
     path = Path(relative)
@@ -35,7 +41,7 @@ def inspect(relative, raw):
         if relative != 'gradle/wrapper/gradle-wrapper.jar' or hashlib.sha256(raw).hexdigest() != WRAPPER_SHA256:
             findings.append('unrecognized binary JAR')
         return findings
-    if path.suffix == '.png':
+    if path.suffix.lower() in {'.png', '.webp'}:
         if relative != 'app/src/main/res/drawable-nodpi/tmdb_logo.png' and SCREENSHOTS.get(relative) != hashlib.sha256(raw).hexdigest():
             findings.append('unreviewed raster image')
         return findings

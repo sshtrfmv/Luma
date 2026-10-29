@@ -27,5 +27,17 @@ class Publication(unittest.TestCase):
         self.assertEqual([], publication.inspect('app/src/main/res/drawable/luma_icon.xml', b'<vector/>'))
 
 
+    def test_reviewed_webp_screenshots_match_exact_bytes(self):
+        root = Path(__file__).parents[2]
+        for relative in publication.SCREENSHOTS:
+            with self.subTest(path=relative):
+                raw = (root / relative).read_bytes()
+                self.assertEqual([], publication.inspect(relative, raw))
+                self.assertIn('unreviewed raster image', publication.inspect(relative, raw + b'changed'))
+
+    def test_unreviewed_webp_is_rejected(self):
+        self.assertIn('unreviewed raster image', publication.inspect('docs/screenshots/unknown.webp', b'RIFF image'))
+
+
 if __name__ == '__main__':
     unittest.main()
