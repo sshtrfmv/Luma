@@ -1,0 +1,1 @@
+package ru.sasha.tvlauncher; public final class R { public static final class drawable { public static final int luma_landscape=1, tmdb_logo=2, luma_youtube=3, luma_vk=4, luma_lampa=5, luma_zona=6, luma_awg=7, luma_vpn=8, luma_vlc=9, luma_localsend=10, luma_apps=11; }}

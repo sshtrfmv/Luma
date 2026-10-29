@@ -1,0 +1,2 @@
+app/src/main/res/drawable-nodpi/reference_screen.png
+app/src/main/res/drawable-nodpi/hero_desert.png

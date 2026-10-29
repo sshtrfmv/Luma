@@ -1,0 +1,36 @@
+# Local SDK, IDE and build output
+local.properties
+.gradle/
+.idea/
+**/build/
+*.iml
+.jvm-check/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Signing, credentials and local configuration
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+keystore.properties
+secrets.properties
+
+# User backups, reports and generated packages
+.sashatv-backups/
+*.log
+*.apk
+*.aab
+*.apks
+SashaTV-report-*/
+SashaTV-report-*.zip
+sashatv-settings*.json
+sashatv-import.json
+sashatv-before-restore.json
+tmdb-token-import.txt

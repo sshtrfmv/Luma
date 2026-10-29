@@ -1,0 +1,12 @@
+plugins { id 'com.android.application' version '8.7.3' apply false }
+
+configurations { regressionRuntime }
+dependencies { regressionRuntime 'org.robolectric:android-all:13-robolectric-9030017' }
+tasks.register('jvmRegression', Exec) {
+    group = 'verification'
+    description = 'Compile Java sources and run standalone regression checks against Android 13.'
+    doFirst {
+        commandLine 'bash', file('tools/check-jvm.sh').absolutePath,
+            configurations.regressionRuntime.singleFile.absolutePath
+    }
+}

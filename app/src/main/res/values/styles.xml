@@ -1,0 +1,30 @@
+<resources>
+    <style name="Theme.Luma" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:alertDialogTheme">@style/Theme.Luma.Dialog</item>
+        <item name="android:colorAccent">#E1E2E8</item>
+        <item name="android:colorControlHighlight">#263D414B</item>
+        <item name="android:windowBackground">#141519</item>
+        <item name="android:navigationBarColor">#141519</item>
+        <item name="android:statusBarColor">#141519</item>
+    </style>
+    <style name="Theme.Luma.Dialog" parent="android:style/Theme.Material.Dialog.Alert">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:colorAccent">#E1E2E8</item>
+        <item name="android:colorBackground">#24252B</item>
+        <item name="android:textColorPrimary">#F4F3F5</item>
+        <item name="android:textColorSecondary">#AEB0B8</item>
+        <item name="android:windowBackground">@drawable/luma_dialog_background</item>
+        <item name="android:backgroundDimAmount">0.42</item>
+        <item name="android:buttonBarButtonStyle">@style/Luma.DialogButton</item>
+        <item name="android:colorControlHighlight">#50535E</item>
+    </style>
+    <style name="Luma.DialogButton" parent="android:style/Widget.Material.Button.Borderless">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">#F4F3F5</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:background">@drawable/luma_dialog_button</item>
+        <item name="android:paddingLeft">20dp</item>
+        <item name="android:paddingRight">20dp</item>
+    </style>
+</resources>
