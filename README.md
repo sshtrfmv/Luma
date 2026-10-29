@@ -2,9 +2,19 @@
 
 Нативный лаунчер для Android TV с управлением пультом, каталогом TMDB и главным экраном в графитовом оформлении. Java, Android Views, без WebView и стороннего UI SDK.
 
-![Иллюстрация интерфейса Luma](docs/assets/preview.svg)
+## Скриншоты
 
-*Схема компоновки, не скриншот телевизора. Пять реальных снимков подготовлены; их открытая публикация ожидает отдельного подтверждения владельца.*
+Реальный интерфейс Luma на SaluteTV, Android 13.
+
+![Главный экран Luma](docs/screenshots/home.webp)
+
+| Приложения | Фильмы |
+| --- | --- |
+| ![Все приложения](docs/screenshots/apps.webp) | ![Каталог фильмов](docs/screenshots/movies.webp) |
+
+| HDMI-устройства | Избранное |
+| --- | --- |
+| ![HDMI-устройства](docs/screenshots/devices.webp) | ![Избранное](docs/screenshots/favorites.webp) |
 
 ## Возможности
 
