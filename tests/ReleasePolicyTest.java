@@ -47,7 +47,7 @@ public class ReleasePolicyTest {
     check(LauncherLogic.nearestColumn(0, 0) == -1);
     check(LauncherLogic.defaultFocusTag("tv").equals("button:Сериалы"));
     check(LauncherLogic.defaultFocusTag("all").equals("button:Приложения"));
-    check(LauncherLogic.defaultFocusTag("home").equals("button:Главная"));
+    check(LauncherLogic.defaultFocusTag("home").equals("hero:В Lampa"));
     System.out.println("PASS: release policy " + checks + " checks");
   }
 }

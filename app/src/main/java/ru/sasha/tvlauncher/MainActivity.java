@@ -1517,7 +1517,7 @@ public class MainActivity extends Activity {
   private void place(FrameLayout parent, View child, int x, int y, int w, int h) {
     FrameLayout.LayoutParams p = new FrameLayout.LayoutParams(px(w), px(h));
     p.leftMargin = px(x);
-    p.topMargin = px(parent == homeContent ? y - 80 : y);
+    p.topMargin = px(y);
     parent.addView(child, p);
   }
 
@@ -1905,7 +1905,8 @@ public class MainActivity extends Activity {
     background.addView(designRoot, screen);
     setContentView(background);
     FrameLayout d = designRoot;
-    place(d, buildHeader(), 0, 0, 1280, 80);
+    // The sidebar replaces the top navigation on the home screen.
+    sharedHeader = null;
     final FrameLayout surface = d;
     homeScroll = new ScrollView(this);
     homeScroll.setFillViewport(true);
@@ -1915,7 +1916,7 @@ public class MainActivity extends Activity {
     homeContent = new FrameLayout(this);
     homeContent.setClipChildren(false);
     homeContent.setClipToPadding(false);
-    homeScroll.addView(homeContent, new ScrollView.LayoutParams(px(1280), px(640 + extraRows)));
+    homeScroll.addView(homeContent, new ScrollView.LayoutParams(px(1280), px(720 + extraRows)));
     FrameLayout homeViewport = new FrameLayout(this);
     homeViewport.setClipChildren(true);
     homeViewport.setClipToPadding(true);
@@ -1923,39 +1924,49 @@ public class MainActivity extends Activity {
         (view, l, t, r, b, ol, ot, or, ob) ->
             view.setClipBounds(new android.graphics.Rect(0, 0, r - l, b - t)));
     homeViewport.addView(homeScroll, new FrameLayout.LayoutParams(-1, -1));
-    place(surface, homeViewport, 0, 80, 1280, 640);
+    place(surface, homeViewport, 0, 0, 1280, 720);
     d = homeContent;
-    FrameLayout hero = roundedPanel(0xff121922);
-    FrostedBackdrop artwork = new FrostedBackdrop(this);
+    // Full-bleed artwork behind everything; it fades into the graphite backdrop toward the shelves.
+    FrameLayout hero = new FrameLayout(this);
+    hero.setClipChildren(false);
+    FrostedBackdrop artwork = new FrostedBackdrop(this, true);
     ImageView heroArt = artwork.image();
     if (featured == null && !catalog.configured())
       heroArt.setImageResource(R.drawable.luma_landscape);
     else if (featured != null) catalog.banner(heroArt, featured.image);
     hero.addView(artwork, new FrameLayout.LayoutParams(-1, -1));
-    place(hero, designText("КИНО И СЕРИАЛЫ", 11, 0xffd2d0d3, false), 35, 88, 300, 20);
+    View fade = new View(this);
+    fade.setFocusable(false);
+    fade.setBackground(
+        new GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[] {0x00121419, 0x00121419, 0xc0121419, 0xff121419}));
+    hero.addView(fade, new FrameLayout.LayoutParams(-1, -1));
+    place(hero, designText("КИНО И СЕРИАЛЫ", 11, 0xffd2d0d3, false), 96, 128, 300, 20);
     TextView heroTitle =
         designText(
             featured == null
                 ? (catalog.configured() ? "Подборка загружается" : "Твой вечер с Luma")
                 : featured.title,
-            29,
+            40,
             WHITE,
             true);
     heroTitle.setMaxLines(2);
     heroTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
-    place(hero, heroTitle, 35, 118, 430, 70);
+    heroTitle.setGravity(Gravity.BOTTOM);
+    place(hero, heroTitle, 96, 150, 560, 104);
     place(
         hero,
         designText(
             featured == null
                 ? (catalog.configured() ? "Дождись загрузки TMDB" : "Фильмы, сериалы и приложения")
                 : featured.year + "  ·  " + (featured.type.equals("tv") ? "Сериал" : "Фильм"),
-            14,
-            0xffb9bec7,
+            15,
+            0xffd0d4dc,
             false),
-        35,
-        194,
-        400,
+        96,
+        262,
+        480,
         22);
     place(
         hero,
@@ -1966,99 +1977,65 @@ public class MainActivity extends Activity {
               else openLampaCard(featured.id, featured.type);
             },
             true),
-        35,
-        230,
+        96,
+        302,
         155,
         43);
-    place(hero, heroAction("Подробнее", this::showMovieDetails, false), 203, 230, 127, 43);
-    if (catalog.films().size() > 1) {
-      TextView counter =
-          designText((bannerIndex + 1) + " / " + catalog.films().size(), 11, WHITE, false);
-      counter.setGravity(Gravity.CENTER);
-      counter.setBackground(bg(0xaa071018, 0));
-      place(hero, counter, 767, 231, 63, 36);
+    place(hero, heroAction("Подробнее", this::showMovieDetails, false), 263, 302, 127, 43);
+    int films = catalog.films().size();
+    if (films > 1) {
       View previous =
           iconButton(
               "previous", "Предыдущий баннер", () -> stepBanner(-1, "banner:previous"), true);
       previous.setTag("banner:previous");
-      place(hero, previous, 840, 231, 36, 36);
+      place(hero, previous, 402, 302, 43, 43);
       View next = iconButton("next", "Следующий баннер", () -> stepBanner(1, "banner:next"), true);
       next.setTag("banner:next");
-      place(hero, next, 886, 231, 36, 36);
+      place(hero, next, 453, 302, 43, 43);
+      // Page dots, centred under the artwork; the current one is stretched into a pill.
+      int shown = Math.min(films, 10);
+      int start = Math.max(0, Math.min(bannerIndex - shown / 2, films - shown));
+      LinearLayout dots = new LinearLayout(this);
+      dots.setOrientation(LinearLayout.HORIZONTAL);
+      dots.setGravity(Gravity.CENTER_VERTICAL);
+      dots.setFocusable(false);
+      dots.setContentDescription((bannerIndex + 1) + " из " + films);
+      for (int i = 0; i < shown; i++) {
+        boolean current = start + i == bannerIndex;
+        GradientDrawable dot = new GradientDrawable();
+        dot.setCornerRadius(px(3));
+        dot.setColor(current ? 0xfff4f3f5 : 0x66f4f3f5);
+        View mark = new View(this);
+        mark.setBackground(dot);
+        LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(px(current ? 18 : 6), px(6));
+        if (i + 1 < shown) dp.rightMargin = px(6);
+        dots.addView(mark, dp);
+      }
+      int dotsWidth = 18 + (shown - 1) * 12;
+      place(hero, dots, (1280 - dotsWidth) / 2, 368, dotsWidth, 8);
     }
     for (int i = 0; i < hero.getChildCount(); i++) {
       View child = hero.getChildAt(i);
       if (child instanceof TextView) ((TextView) child).setShadowLayer(px(3), 0, px(1), 0x90000000);
     }
-    place(d, hero, 80, 85, 988, 287);
-    FrameLayout weather = roundedPanel(0xff28333e);
-    ImageView landscape = new ImageView(this);
-    landscape.setScaleType(ImageView.ScaleType.CENTER_CROP);
-    landscape.setImageResource(R.drawable.luma_landscape);
-    weather.addView(landscape, new FrameLayout.LayoutParams(-1, -1));
-    View cover = new View(this);
-    // Quiet gradient keeps weather data legible over Luma's own vector landscape.
-    cover.setBackground(
-        new android.graphics.drawable.Drawable() {
-          private final android.graphics.Paint paint = new android.graphics.Paint();
-
-          @Override
-          protected void onBoundsChange(android.graphics.Rect b) {
-            super.onBoundsChange(b);
-            paint.setShader(
-                new android.graphics.LinearGradient(
-                    0,
-                    b.top,
-                    0,
-                    b.bottom,
-                    new int[] {0xff28333e, 0xee28333e, 0x8828333e, 0x0028333e},
-                    new float[] {0f, .45f, .63f, .82f},
-                    android.graphics.Shader.TileMode.CLAMP));
-          }
-
-          @Override
-          public void draw(android.graphics.Canvas canvas) {
-            canvas.drawRect(getBounds(), paint);
-          }
-
-          @Override
-          public void setAlpha(int alpha) {
-            paint.setAlpha(alpha);
-            invalidateSelf();
-          }
-
-          @Override
-          public void setColorFilter(android.graphics.ColorFilter filter) {
-            paint.setColorFilter(filter);
-            invalidateSelf();
-          }
-
-          @Override
-          public int getOpacity() {
-            return android.graphics.PixelFormat.TRANSLUCENT;
-          }
-        });
-    FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(-1, -1);
-    weather.addView(cover, cp);
-    weatherTempView = designText(weatherTemperature, 36, WHITE, false);
+    place(d, hero, 0, 0, 1280, 600);
+    // Weather and network sit in the top-right corner instead of a separate card.
+    weatherTempView = designText(weatherTemperature, 26, WHITE, false);
     weatherStatusView = designText(weatherDescription, 11, WHITE, false);
-    weatherStatusView.setMaxLines(2);
-    weatherIconView = icon("weather", 0xffd4e1ed);
-    place(weather, weatherIconView, 69, 20, 47, 40);
-    place(weather, weatherTempView, 15, 65, 155, 48);
-    weatherTempView.setGravity(Gravity.CENTER);
-    place(weather, weatherStatusView, 15, 119, 155, 25);
-    weatherStatusView.setGravity(Gravity.CENTER);
-    TextView city = designText(weatherCity().name, 11, 0xffc4d1dc, false);
-    city.setGravity(Gravity.CENTER);
+    weatherIconView = icon("weather", 0xffe4ecf4);
+    TextView city = designText(weatherCity().name, 12, 0xffdbe3ec, false);
+    city.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
     city.setSingleLine(true);
     city.setEllipsize(android.text.TextUtils.TruncateAt.END);
-    place(weather, city, 15, 148, 155, 20);
-    place(d, weather, 1082, 85, 185, 287);
-    TextView credit = designText("Open-Meteo", 9, WHITE, false);
-    credit.setBackgroundColor(0x660d1119);
-    credit.setGravity(Gravity.CENTER);
-    place(weather, credit, 37, 264, 110, 18);
+    TextView credit = designText("Open-Meteo", 9, 0xb3ffffff, false);
+    credit.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+    for (TextView text : new TextView[] {weatherTempView, city, credit})
+      text.setShadowLayer(px(3), 0, px(1), 0x90000000);
+    place(d, weatherIconView, 962, 26, 30, 30);
+    place(d, weatherTempView, 998, 24, 74, 34);
+    place(d, city, 1068, 24, 144, 20);
+    place(d, credit, 1068, 43, 144, 14);
+    place(d, iconButton("wifi", "Настройки сети", this::openWifiSettings, false), 1220, 20, 44, 44);
     updateWeather();
     drawHomeRows(d);
     refreshCatalog(false);
@@ -2990,13 +2967,17 @@ public class MainActivity extends Activity {
   }
 
   private final class DrawerController {
-    private final FrameLayout root, drawer;
-    private final View scrim;
+    // Design units: collapsed rail, expanded glass panel, floating margin, item geometry.
+    private static final int RAIL = 64, WIDE = 272, EDGE = 16, ITEM_H = 40, STEP = 42;
+    private static final int NAV_TOP = 70, SECTION_TOP = 418, APP_TOP = 444, MAX_APPS = 5;
+    private static final int DARK = 0xff15161b, SOFT = 0xffcfd1d9;
+    private final FrameLayout root, drawer, avatar;
+    private final View scrim, divider;
     private final List<View> buttons = new ArrayList<>();
     private final List<TextView> captions = new ArrayList<>();
-    private final TextView title;
-    private final android.graphics.drawable.GradientDrawable panel =
-        LumaStyle.surface(0xf224262d, 0, designScale);
+    private final TextView title, section;
+    private final TextClock clock;
+    private final android.graphics.drawable.GradientDrawable panel = glass();
     private final android.view.ViewTreeObserver.OnGlobalFocusChangeListener focusListener;
     private final boolean design;
     private java.lang.ref.WeakReference<View> returnFocus = new java.lang.ref.WeakReference<>(null);
@@ -3019,109 +3000,146 @@ public class MainActivity extends Activity {
             @Override
             public void addFocusables(ArrayList<View> views, int direction, int mode) {
               // Entry from content is explicit (left edge only). Never let the tall
-              // rail win Android's geometric search for up/down/right transitions.
+              // panel win Android's geometric search for up/down/right transitions.
               if (contains(getCurrentFocus())) super.addFocusables(views, direction, mode);
             }
           };
-      panel.setCornerRadius(0);
       drawer.setClipChildren(true);
       drawer.setClipToPadding(true);
       drawer.setBackground(panel);
-      FrameLayout.LayoutParams dp = new FrameLayout.LayoutParams(unit(65), -1);
+      // A floating card with a margin on every side, not an edge-to-edge strip.
+      FrameLayout.LayoutParams dp = new FrameLayout.LayoutParams(unit(RAIL), -1);
+      dp.leftMargin = unit(EDGE);
+      dp.topMargin = unit(EDGE);
+      dp.bottomMargin = unit(EDGE);
       root.addView(drawer, dp);
-      title = label("Luma", 19, WHITE);
+
+      // Profile row: avatar, name, clock.
+      avatar = new FrameLayout(MainActivity.this);
+      android.graphics.drawable.GradientDrawable disc =
+          new android.graphics.drawable.GradientDrawable(
+              android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+              new int[] {0xff7a7d8a, 0xff41434d});
+      disc.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+      avatar.setBackground(disc);
+      avatar.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+      TextView initial = label("L", 17, WHITE);
+      initial.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+      initial.setGravity(Gravity.CENTER);
+      avatar.addView(initial, new FrameLayout.LayoutParams(-1, -1));
+      FrameLayout.LayoutParams ap = new FrameLayout.LayoutParams(unit(36), unit(36));
+      ap.leftMargin = unit(14);
+      ap.topMargin = unit(14);
+      drawer.addView(avatar, ap);
+      title = label("Luma", 16, WHITE);
       title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-      title.setLetterSpacing(.06f);
+      title.setGravity(Gravity.CENTER_VERTICAL);
       title.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-      FrameLayout.LayoutParams tp = new FrameLayout.LayoutParams(unit(150), unit(28));
-      tp.leftMargin = unit(67);
-      tp.topMargin = unit(46);
+      FrameLayout.LayoutParams tp = new FrameLayout.LayoutParams(unit(120), unit(36));
+      tp.leftMargin = unit(60);
+      tp.topMargin = unit(14);
       drawer.addView(title, tp);
+      clock = new TextClock(MainActivity.this);
+      clock.setFormat24Hour("HH:mm");
+      clock.setFormat12Hour("HH:mm");
+      clock.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+      clock.setIncludeFontPadding(false);
+      clock.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, px(14));
+      clock.setTextColor(SOFT);
+      clock.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+      clock.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+      FrameLayout.LayoutParams kp =
+          new FrameLayout.LayoutParams(unit(60), unit(36), Gravity.END | Gravity.TOP);
+      kp.topMargin = unit(14);
+      kp.rightMargin = unit(18);
+      drawer.addView(clock, kp);
+
+      // Primary navigation.
       String[] kinds = {
-        "home", "film", "series", "search", "favorite", "apps", "devices", "settings"
+        "search", "home", "film", "series", "favorite", "apps", "devices", "settings"
       };
       String[] labels = {
+        "Поиск",
         "Главная",
         "Фильмы",
         "Сериалы",
-        "Поиск",
         "Избранное",
         "Приложения",
         "Устройства",
         "Настройки"
       };
       Runnable[] actions = {
+        () -> showSearch(false),
         MainActivity.this::showHome,
         () -> showBrowse("movie", false),
         () -> showBrowse("tv", false),
-        () -> showSearch(false),
         MainActivity.this::showFilmFavorites,
         MainActivity.this::showAll,
         MainActivity.this::showDevices,
         MainActivity.this::openSettings
       };
       for (int i = 0; i < kinds.length; i++) {
-        FrameLayout item = new FrameLayout(MainActivity.this);
-        item.setId(View.generateViewId());
-        item.setTag("drawer:" + kinds[i]);
         final String kind = kinds[i];
         final boolean active = kind.equals(LauncherLogic.drawerKind(page));
-        item.setSelected(active);
-        item.setContentDescription(labels[i] + (active ? ". Текущий раздел" : ""));
-        item.setFocusable(true);
-        item.setDefaultFocusHighlightEnabled(false);
-        item.setClipChildren(true);
-        item.setBackground(LumaStyle.states(active ? 0xff32343b : 0, unit(14), designScale));
-        final ImageView image = icon(kinds[i], active ? WHITE : MUTED);
-        FrameLayout.LayoutParams ip = new FrameLayout.LayoutParams(unit(22), unit(22));
-        ip.leftMargin = unit(11);
-        ip.topMargin = unit(13);
-        item.addView(image, ip);
-        TextView caption = label(labels[i], 15, active ? WHITE : MUTED);
-        caption.setSingleLine(true);
-        caption.setGravity(Gravity.CENTER_VERTICAL);
-        caption.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        if (active) caption.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(unit(156), -1);
-        cp.leftMargin = unit(57);
-        item.addView(caption, cp);
-        if (active) {
-          View marker = new View(MainActivity.this);
-          marker.setBackground(bg(0xffd6d7de, 0));
-          FrameLayout.LayoutParams mp =
-              new FrameLayout.LayoutParams(unit(3), unit(20), Gravity.CENTER_VERTICAL);
-          item.addView(marker, mp);
-        }
-        item.setOnFocusChangeListener(
-            (view, focused) -> {
-              // StateListDrawable retains the translucent material without allocations on focus.
-              image.setImageDrawable(new LineIcon(kind, focused || active ? WHITE : MUTED));
-              caption.setTextColor(focused || active ? WHITE : MUTED);
-            });
-        item.setOnHoverListener(
-            (view, event) -> {
-              if (event.getAction() == android.view.MotionEvent.ACTION_HOVER_ENTER)
-                view.requestFocus();
-              return false;
-            });
+        final ImageView glyph = icon(kind, active ? WHITE : SOFT);
+        FrameLayout item =
+            makeItem("drawer:" + kind, labels[i], active, glyph, kind, 22, NAV_TOP + i * STEP);
         final Runnable action = actions[i];
         item.setOnClickListener(v -> action.run());
         if (kind.equals("settings")) aboutOnHold(item);
-        item.setOnKeyListener(
-            (view, key, event) -> {
-              if (key == KeyEvent.KEYCODE_DPAD_RIGHT) {
-                if (event.getAction() == KeyEvent.ACTION_DOWN) leave();
-                return true;
-              }
-              if (key == KeyEvent.KEYCODE_DPAD_LEFT) return true;
-              return false;
-            });
-        FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(unit(44), unit(48));
-        bp.leftMargin = unit(10);
-        bp.topMargin = unit(22 + i * 48);
-        drawer.addView(item, bp);
-        buttons.add(item);
-        captions.add(caption);
+      }
+
+      // "Каналы и приложения": the first favourites, as round icons.
+      List<ResolveInfo> quick = new ArrayList<>();
+      for (String pkg : favoritePackages()) {
+        for (ResolveInfo app : installed)
+          if (app.activityInfo.packageName.equals(pkg)) {
+            quick.add(app);
+            break;
+          }
+        if (quick.size() >= MAX_APPS) break;
+      }
+      divider = new View(MainActivity.this);
+      divider.setBackgroundColor(0x33ffffff);
+      divider.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+      section = label("Каналы и приложения", 12, 0xffa4a7b1);
+      section.setSingleLine(true);
+      section.setGravity(Gravity.CENTER_VERTICAL);
+      section.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+      if (!quick.isEmpty()) {
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(unit(36), Math.max(1, unit(1)));
+        lp.leftMargin = unit(14);
+        lp.topMargin = unit(SECTION_TOP - 6);
+        drawer.addView(divider, lp);
+        FrameLayout.LayoutParams hp = new FrameLayout.LayoutParams(unit(226), unit(18));
+        hp.leftMargin = unit(22);
+        hp.topMargin = unit(SECTION_TOP);
+        drawer.addView(section, hp);
+      }
+      for (int j = 0; j < quick.size(); j++) {
+        final ResolveInfo app = quick.get(j);
+        final String pkg = app.activityInfo.packageName;
+        String loaded = appLabels.get(app);
+        if (loaded == null) loaded = app.loadLabel(pm).toString();
+        final String name = appDisplayName(pkg, loaded);
+        FrameLayout plate = new FrameLayout(MainActivity.this);
+        android.graphics.drawable.GradientDrawable round =
+            new android.graphics.drawable.GradientDrawable();
+        round.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        round.setColor(0xff2b2d34);
+        plate.setBackground(round);
+        plate.setClipToOutline(true);
+        ImageView logo = new ImageView(MainActivity.this);
+        int artwork = appArtwork(pkg);
+        logo.setImageDrawable(
+            artwork != 0
+                ? MainActivity.this.getDrawable(artwork)
+                : new UtilityAppIcon(loaded, pkg));
+        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        plate.addView(logo, new FrameLayout.LayoutParams(unit(20), unit(20), Gravity.CENTER));
+        FrameLayout item =
+            makeItem("drawer:app:" + pkg, name, false, plate, null, 26, APP_TOP + j * STEP);
+        item.setOnClickListener(v -> launch(app));
       }
       for (int i = 0; i < buttons.size(); i++) {
         View item = buttons.get(i);
@@ -3150,6 +3168,93 @@ public class MainActivity extends Activity {
           });
       applyReveal(0);
       expand(contains(getCurrentFocus()));
+    }
+
+    /** Frosted-glass card: translucent graphite, soft top light, hairline edge. */
+    private android.graphics.drawable.GradientDrawable glass() {
+      android.graphics.drawable.GradientDrawable g =
+          new android.graphics.drawable.GradientDrawable(
+              android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+              new int[] {0xd82c2e35, 0xd01c1d23});
+      g.setCornerRadius(unit(28));
+      g.setStroke(Math.max(1, Math.round(designScale)), 0x2effffff);
+      return g;
+    }
+
+    /** White pill under the focused row; a faint pill marks the current section. */
+    private android.graphics.drawable.StateListDrawable pill(boolean active) {
+      android.graphics.drawable.GradientDrawable on = new android.graphics.drawable.GradientDrawable();
+      on.setColor(0xfff3f4f7);
+      on.setCornerRadius(unit(14));
+      android.graphics.drawable.GradientDrawable off = new android.graphics.drawable.GradientDrawable();
+      off.setColor(active ? 0x30ffffff : 0x00000000);
+      off.setCornerRadius(unit(14));
+      android.graphics.drawable.StateListDrawable states =
+          new android.graphics.drawable.StateListDrawable();
+      states.addState(new int[] {android.R.attr.state_focused}, on);
+      states.addState(new int[0], off);
+      return states;
+    }
+
+    /** One focusable row of the panel: glyph on the left, caption on the right. */
+    private FrameLayout makeItem(
+        String tag,
+        String text,
+        final boolean active,
+        final View glyph,
+        final String lineKind,
+        int glyphSize,
+        int top) {
+      FrameLayout item = new FrameLayout(MainActivity.this);
+      item.setId(View.generateViewId());
+      item.setTag(tag);
+      item.setSelected(active);
+      item.setContentDescription(text + (active ? ". Текущий раздел" : ""));
+      item.setFocusable(true);
+      item.setDefaultFocusHighlightEnabled(false);
+      item.setClipChildren(true);
+      item.setBackground(pill(active));
+      FrameLayout.LayoutParams gp = new FrameLayout.LayoutParams(unit(glyphSize), unit(glyphSize));
+      gp.leftMargin = unit((44 - glyphSize) / 2);
+      gp.topMargin = unit((ITEM_H - glyphSize) / 2);
+      item.addView(glyph, gp);
+      final TextView caption = label(text, 15, active ? WHITE : SOFT);
+      caption.setSingleLine(true);
+      caption.setEllipsize(android.text.TextUtils.TruncateAt.END);
+      caption.setGravity(Gravity.CENTER_VERTICAL);
+      caption.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+      if (active) caption.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+      FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(unit(WIDE - 20 - 56), -1);
+      cp.leftMargin = unit(52);
+      item.addView(caption, cp);
+      item.setOnFocusChangeListener(
+          (view, focused) -> {
+            int color = focused ? DARK : active ? WHITE : SOFT;
+            if (lineKind != null) ((ImageView) glyph).setImageDrawable(new LineIcon(lineKind, color));
+            caption.setTextColor(color);
+          });
+      item.setOnHoverListener(
+          (view, event) -> {
+            if (event.getAction() == android.view.MotionEvent.ACTION_HOVER_ENTER)
+              view.requestFocus();
+            return false;
+          });
+      item.setOnKeyListener(
+          (view, key, event) -> {
+            if (key == KeyEvent.KEYCODE_DPAD_RIGHT) {
+              if (event.getAction() == KeyEvent.ACTION_DOWN) leave();
+              return true;
+            }
+            if (key == KeyEvent.KEYCODE_DPAD_LEFT) return true;
+            return false;
+          });
+      FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(unit(44), unit(ITEM_H));
+      bp.leftMargin = unit(10);
+      bp.topMargin = unit(top);
+      drawer.addView(item, bp);
+      buttons.add(item);
+      captions.add(caption);
+      return item;
     }
 
     boolean contains(View view) {
@@ -3192,20 +3297,24 @@ public class MainActivity extends Activity {
     private void applyReveal(float fraction) {
       reveal = fraction;
       android.view.ViewGroup.LayoutParams dp = drawer.getLayoutParams();
-      dp.width = unit(Math.round(65 + 175 * fraction));
+      dp.width = unit(Math.round(RAIL + (WIDE - RAIL) * fraction));
       dp.height = android.view.ViewGroup.LayoutParams.MATCH_PARENT;
       drawer.setLayoutParams(dp);
       panel.setAlpha(Math.round(255 * fraction));
-      drawer.setElevation(unit(12) * fraction);
-      scrim.setAlpha(.18f * fraction);
+      drawer.setElevation(unit(16) * fraction);
+      scrim.setAlpha(.22f * fraction);
       if (fraction == 0 && !expanded) scrim.setVisibility(View.GONE);
+      // Profile row and section title appear with the panel; the rail shows a divider instead.
+      avatar.setAlpha(fraction);
       title.setAlpha(fraction);
+      clock.setAlpha(fraction);
+      section.setAlpha(fraction);
+      divider.setAlpha(1 - fraction);
       for (TextView caption : captions) caption.setAlpha(Math.max(0, (fraction - .15f) / .85f));
       for (int i = 0; i < buttons.size(); i++) {
         View button = buttons.get(i);
         FrameLayout.LayoutParams bp = (FrameLayout.LayoutParams) button.getLayoutParams();
-        bp.width = unit(Math.round(44 + 176 * fraction));
-        bp.topMargin = unit(100 + i * 48);
+        bp.width = unit(Math.round(44 + (WIDE - RAIL) * fraction));
         button.setLayoutParams(bp);
       }
     }
@@ -3223,22 +3332,24 @@ public class MainActivity extends Activity {
     }
   }
 
+  private String appDisplayName(String pkg, String loadedLabel) {
+    return pkg.equals("org.amnezia.vpn")
+        ? "AmneziaVPN"
+        : pkg.equals("org.amnezia.awg")
+            ? "AmneziaWG"
+            : pkg.equals("top.rootu.lampa") ? "Lampa" : loadedLabel;
+  }
+
   private void wireHomeFocus(FrameLayout root) {
     View primary = root.findViewWithTag("hero:В Lampa"),
         details = root.findViewWithTag("hero:Подробнее"),
-        left = root.findViewWithTag("drawer:home");
-    List<View> controls = new ArrayList<>();
-    collectNavigationTargets(sharedHeader, controls);
-    for (int i = 0; i < controls.size(); i++) {
-      View item = controls.get(i);
-      link(item, i == 0 ? left : controls.get(i - 1), KeyEvent.KEYCODE_DPAD_LEFT);
-      link(item, controls.get(Math.min(i + 1, controls.size() - 1)), KeyEvent.KEYCODE_DPAD_RIGHT);
-      link(item, item, KeyEvent.KEYCODE_DPAD_UP);
-      link(item, primary, KeyEvent.KEYCODE_DPAD_DOWN);
-    }
-    String[] top = {"Главная", "Фильмы", "Сериалы", "Приложения", "Устройства", "Настройки"};
-    for (String name : top)
-      link(root.findViewWithTag("button:" + name), primary, KeyEvent.KEYCODE_DPAD_DOWN);
+        left = root.findViewWithTag("drawer:home"),
+        status = root.findViewWithTag("icon:Настройки сети");
+    // The only control above the hero is the network shortcut in the top-right corner.
+    link(status, left, KeyEvent.KEYCODE_DPAD_LEFT);
+    link(status, status, KeyEvent.KEYCODE_DPAD_RIGHT);
+    link(status, status, KeyEvent.KEYCODE_DPAD_UP);
+    link(status, primary, KeyEvent.KEYCODE_DPAD_DOWN);
     link(primary, details, KeyEvent.KEYCODE_DPAD_RIGHT);
     link(primary, left, KeyEvent.KEYCODE_DPAD_LEFT);
     link(details, primary, KeyEvent.KEYCODE_DPAD_LEFT);
@@ -3249,8 +3360,8 @@ public class MainActivity extends Activity {
     link(previous, next, KeyEvent.KEYCODE_DPAD_RIGHT);
     link(next, previous, KeyEvent.KEYCODE_DPAD_LEFT);
     link(next, next, KeyEvent.KEYCODE_DPAD_RIGHT);
-    link(primary, root.findViewWithTag("button:Главная"), KeyEvent.KEYCODE_DPAD_UP);
-    link(details, root.findViewWithTag("button:Фильмы"), KeyEvent.KEYCODE_DPAD_UP);
+    link(primary, status, KeyEvent.KEYCODE_DPAD_UP);
+    link(details, status, KeyEvent.KEYCODE_DPAD_UP);
     List<List<View>> rows = new ArrayList<>();
     View appContainer = root.findViewWithTag("home:apps-row");
     if (appContainer instanceof LinearLayout) {
@@ -3302,8 +3413,8 @@ public class MainActivity extends Activity {
       List<View> filmRow = rows.get(1);
       link(filmRow.get(filmRow.size() - 1), feedSettings, KeyEvent.KEYCODE_DPAD_UP);
     }
-    link(previous, root.findViewWithTag("button:Фильмы"), KeyEvent.KEYCODE_DPAD_UP);
-    link(next, root.findViewWithTag("button:Приложения"), KeyEvent.KEYCODE_DPAD_UP);
+    link(previous, status, KeyEvent.KEYCODE_DPAD_UP);
+    link(next, status, KeyEvent.KEYCODE_DPAD_UP);
     link(previous, first, KeyEvent.KEYCODE_DPAD_DOWN);
     link(next, first, KeyEvent.KEYCODE_DPAD_DOWN);
     link(primary, first, KeyEvent.KEYCODE_DPAD_DOWN);
@@ -3360,7 +3471,7 @@ public class MainActivity extends Activity {
   }
 
   private void collectNavigationTargets(View view, List<View> targets) {
-    if (view.getVisibility() != View.VISIBLE || !view.isEnabled()) return;
+    if (view == null || view.getVisibility() != View.VISIBLE || !view.isEnabled()) return;
     if (view.isFocusable() && view.getTag() instanceof String) {
       targets.add(view);
       return;

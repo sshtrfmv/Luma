@@ -13,6 +13,11 @@ final class FrostedBackdrop extends FrameLayout {
   private final ImageView sharp;
 
   FrostedBackdrop(Context context) {
+    this(context, false);
+  }
+
+  /** wide: full-bleed hero; the frosted zone stays on the left, artwork is sharp across the rest. */
+  FrostedBackdrop(Context context, boolean wide) {
     super(context);
     setFocusable(false);
     setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
@@ -41,7 +46,7 @@ final class FrostedBackdrop extends FrameLayout {
     sharp.setScaleType(ImageView.ScaleType.CENTER_CROP);
     addView(sharp, new FrameLayout.LayoutParams(-1, -1));
     if (Build.VERSION.SDK_INT >= 31) {
-      FeatherLayer layer = new FeatherLayer(context);
+      FeatherLayer layer = new FeatherLayer(context, wide);
       layer.addView(blurred, new FrameLayout.LayoutParams(-1, -1));
       addView(layer, new FrameLayout.LayoutParams(-1, -1));
     }
@@ -59,8 +64,10 @@ final class FrostedBackdrop extends FrameLayout {
                       0,
                       w,
                       0,
-                      new int[] {0xa018181e, 0x6818181e, 0x0018181e},
-                      new float[] {0, .38f, .82f},
+                      wide
+                          ? new int[] {0xb8141419, 0x78141419, 0x00141419}
+                          : new int[] {0xa018181e, 0x6818181e, 0x0018181e},
+                      wide ? new float[] {0, .32f, .70f} : new float[] {0, .38f, .82f},
                       Shader.TileMode.CLAMP));
           }
 
@@ -113,9 +120,11 @@ final class FrostedBackdrop extends FrameLayout {
 
   private static final class FeatherLayer extends FrameLayout {
     private final Paint mask = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final boolean wide;
 
-    FeatherLayer(Context context) {
+    FeatherLayer(Context context, boolean wide) {
       super(context);
+      this.wide = wide;
       mask.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_IN));
     }
 
@@ -130,7 +139,7 @@ final class FrostedBackdrop extends FrameLayout {
                 w,
                 0,
                 new int[] {0xff000000, 0xee000000, 0x00000000, 0x00000000},
-                new float[] {0, .43f, .76f, 1},
+                wide ? new float[] {0, .24f, .52f, 1} : new float[] {0, .43f, .76f, 1},
                 Shader.TileMode.CLAMP));
     }
 
