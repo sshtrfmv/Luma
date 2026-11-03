@@ -33,7 +33,8 @@ final class LauncherLogic {
   }
 
   static String defaultFocusTag(String page) {
-    return "home".equals(page) ? "button:Главная" : drawerContentTag(page);
+    // The home screen has no top navigation: the hero button is the natural first focus.
+    return drawerContentTag(page);
   }
 
   static String drawerKind(String page) {
